@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Bloqueia todo acesso direto do client
+    // Apenas o backend com Admin SDK pode ler/escrever
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
