@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # UNDF Achados e Perdidos
 
 Sistema completo de achados e perdidos para campus universitário, com backend FastAPI + Firebase e frontend React com identidade visual UNDF.
@@ -272,3 +273,10 @@ service cloud.firestore {
 ## 📄 Licença
 
 MIT
+=======
+# achadosEPerdidos
+
+
+PROJETO FEITO PARA FACULDADE - UNDF 
+Achados e perdidos 
+>>>>>>> d5bf3a9770430383135a2218b38094b7dbea5884

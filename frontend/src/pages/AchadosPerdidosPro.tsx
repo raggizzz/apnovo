@@ -64,11 +64,19 @@ export function AchadosPerdidosPro() {
       setLoading(true);
       const { data, error } = await supabase
         .from('items')
-        .select('*')
+        .select(`
+          *,
+          item_photos (
+            url,
+            position
+          )
+        `)
         .eq('status', 'OPEN')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      console.log('Loaded items:', data);
 
       const formattedItems: Item[] = (data || []).map((item: any) => ({
         id: item.id,
@@ -80,10 +88,11 @@ export function AchadosPerdidosPro() {
         building: item.building_name,
         date: getRelativeTime(new Date(item.created_at)),
         status: item.type.toLowerCase() as "found" | "lost",
-        photoUrl: item.photos?.[0]?.url,
+        photoUrl: item.item_photos?.[0]?.url || null,
         timestamp: new Date(item.created_at)
       }));
 
+      console.log('Formatted items:', formattedItems);
       setItems(formattedItems);
     } catch (error) {
       console.error('Erro ao carregar items:', error);
@@ -125,17 +134,27 @@ export function AchadosPerdidosPro() {
         const fileExt = formData.photo.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
         
-        const { error: uploadError } = await supabase.storage
+        console.log('Uploading photo:', fileName);
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('items-photos')
-          .upload(fileName, formData.photo);
+          .upload(fileName, formData.photo, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw uploadError;
+        }
+
+        console.log('Upload success:', uploadData);
 
         const { data: { publicUrl } } = supabase.storage
           .from('items-photos')
           .getPublicUrl(fileName);
 
         photoUrl = publicUrl;
+        console.log('Public URL:', photoUrl);
       }
 
       // 2. Criar item no Supabase
@@ -150,6 +169,7 @@ export function AchadosPerdidosPro() {
           building_name: formData.building,
           type: formData.status.toUpperCase(),
           status: 'OPEN'
+          // owner_id será NULL (sem autenticação por enquanto)
         })
         .select()
         .single();
@@ -158,13 +178,21 @@ export function AchadosPerdidosPro() {
 
       // 3. Adicionar foto se houver
       if (photoUrl && data) {
-        await supabase
+        console.log('Saving photo to database:', { item_id: data.id, url: photoUrl });
+        const { data: photoData, error: photoError } = await supabase
           .from('item_photos')
           .insert({
             item_id: data.id,
             url: photoUrl,
             position: 0
-          });
+          })
+          .select();
+
+        if (photoError) {
+          console.error('Photo insert error:', photoError);
+        } else {
+          console.log('Photo saved:', photoData);
+        }
       }
 
       // 4. Recarregar lista
