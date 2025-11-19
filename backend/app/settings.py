@@ -8,11 +8,11 @@ from pydantic import Field
 class Settings(BaseSettings):
     project_name: str = "Lost and Found API"
     environment: str = Field(default="development")
-    firebase_project_id: str
-    firebase_client_email: str
-    firebase_private_key: str
-    firestore_emulator_host: Optional[str] = None
-    storage_bucket: Optional[str] = None
+    
+    # Supabase settings (optional for backend)
+    supabase_url: Optional[str] = None
+    supabase_service_role_key: Optional[str] = None
+    supabase_db_url: Optional[str] = None
 
     class Config:
         env_file = "../.env"

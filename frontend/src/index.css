@@ -1,16 +1,32 @@
 :root {
-  /* Cores UNDF */
-  --undf-green-primary: #6B9E3E;
-  --undf-green-dark: #4A7C2E;
-  --undf-green-light: #8BC34A;
-  --undf-teal-primary: #1B5E5E;
-  --undf-teal-dark: #0D4444;
-  --undf-gray-light: #F5F5F5;
-  --undf-gray-medium: #9E9E9E;
-  --undf-gray-dark: #424242;
+  /* Cores UnDF - Identidade Visual Oficial */
+  --undf-blue-dark: #2B5C9E;    /* Azul escuro principal */
+  --undf-blue-medium: #3D8AC7;  /* Azul médio */
+  --undf-blue-light: #7CB4E0;   /* Azul claro */
+  --undf-blue-lighter: #E8F4FF; /* Azul muito claro (backgrounds) */
+  --undf-white: #FFFFFF;        /* Branco */
+
+  /* Grays - Escala de Cinza Profissional */
+  --undf-gray-50: #F8FAFC;
+  --undf-gray-100: #F1F5F9;
+  --undf-gray-200: #E2E8F0;
+  --undf-gray-300: #CBD5E1;
+  --undf-gray-400: #94A3B8;
+  --undf-gray-500: #64748B;
+  --undf-gray-600: #475569;
+  --undf-gray-700: #334155;
+  --undf-gray-800: #1E293B;
+  --undf-gray-900: #0F172A;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   
   /* Typography */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -18,8 +34,6 @@
   
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 * {
@@ -30,8 +44,8 @@
 
 body {
   margin: 0;
-  background-color: var(--undf-gray-light);
-  color: var(--undf-gray-dark);
+  background-color: var(--undf-gray-50);
+  color: var(--undf-gray-800);
   line-height: 1.6;
 }
 

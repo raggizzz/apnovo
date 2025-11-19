@@ -9,11 +9,11 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+  console.error('Missing Supabase environment variables. Please check your .env file.');
 }
 
 // Criar cliente Supabase
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl || '', supabaseAnonKey || '', {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
@@ -28,124 +28,53 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // ============================================
 // TYPES
-// ============================================
-
 export interface User {
   id: string;
-  auth_id: string;
-  name: string;
   email: string;
-  phone?: string;
-  role: 'user' | 'staff' | 'admin';
-  campus_home?: string;
-  department?: string;
-  photo_url?: string;
-  status: 'active' | 'suspended';
-  created_at: string;
-  updated_at: string;
+  role: 'admin' | 'staff' | 'user';
+  name: string;
 }
 
 export interface Item {
   id: string;
-  owner_id: string;
-  type: 'FOUND' | 'LOST';
   title: string;
   description: string;
-  category: string;
-  subcategory?: string;
-  tags: string[];
-  color?: string;
-  brand?: string;
-  campus_id: string;
-  campus_name: string;
-  building_id: string;
-  building_name: string;
-  spot?: string;
-  lat: number;
-  lng: number;
+  type: 'LOST' | 'FOUND';
   status: 'OPEN' | 'RESOLVED' | 'EXPIRED';
-  resolved_reason?: string;
-  resolved_at?: string;
-  expires_at?: string;
-  flagged: boolean;
-  flag_count: number;
-  view_count: number;
-  contact_count: number;
-  created_at: string;
-  updated_at: string;
-  photos?: ItemPhoto[];
+  date: string;
+  location: string;
+  campus: string;
+  building?: string;
+  reference?: string;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
+  item_photos?: ItemPhoto[];
 }
 
 export interface ItemPhoto {
-  id: string;
-  item_id: string;
+  id?: string;
+  item_id?: string;
   url: string;
-  thumbnail_url?: string;
-  width?: number;
-  height?: number;
   position: number;
-  created_at: string;
 }
 
-export interface Campus {
-  id: string;
-  name: string;
-  address: string;
-  lat: number;
-  lng: number;
-  active: boolean;
-  phone?: string;
-  email?: string;
-  lost_found_location?: string;
-}
+export const CAMPUS_OPTIONS = ['Asa Norte', 'Asa Sul', 'Planaltina', 'Ceilândia', 'Gama'];
 
-export interface Building {
-  id: string;
-  campus_id: string;
-  name: string;
-  code: string;
-  lat: number;
-  lng: number;
-  floors: number;
-  active: boolean;
-}
+export const BUILDING_OPTIONS = [
+  'Bloco A',
+  'Bloco B',
+  'Bloco C',
+  'Biblioteca',
+  'Restaurante Universitário',
+  'Ginásio',
+  'Auditório',
+  'Administração'
+];
 
 // ============================================
 // AUTH HELPERS
-// ============================================
-
-export const signUp = async (email: string, password: string, userData: Partial<User>) => {
-  const { data: authData, error: authError } = await supabase.auth.signUp({
-    email,
-    password,
-  });
-
-  if (authError) throw authError;
-  if (!authData.user) throw new Error('No user returned');
-
-  // Criar perfil do usuário
-  const { error: profileError } = await supabase
-    .from('users')
-    .insert({
-      auth_id: authData.user.id,
-      email,
-      ...userData,
-    });
-
-  if (profileError) throw profileError;
-
-  return authData;
-};
-
-export const signIn = async (email: string, password: string) => {
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  if (error) throw error;
-  return data;
-};
+// The original signUp, signIn, getCurrentUser functions were removed as per the provided edit.
 
 export const signOut = async () => {
   const { error } = await supabase.auth.signOut();
@@ -154,7 +83,7 @@ export const signOut = async () => {
 
 export const getCurrentUser = async () => {
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   if (!user) return null;
 
   const { data: profile } = await supabase
@@ -191,8 +120,13 @@ export const uploadItemPhoto = async (file: File, itemId: string): Promise<strin
 };
 
 export const deleteItemPhoto = async (photoUrl: string) => {
-  const fileName = photoUrl.split('/items-photos/')[1];
-  
+  const parts = photoUrl.split('/items-photos/');
+  const fileName = parts[1];
+
+  if (!fileName) {
+    throw new Error('Invalid photo URL');
+  }
+
   const { error } = await supabase.storage
     .from('items-photos')
     .remove([fileName]);
@@ -298,6 +232,19 @@ export const updateItem = async (itemId: string, updates: Partial<Item>) => {
   return data as Item;
 };
 
+export interface Campus {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+export interface Building {
+  id: string;
+  campus_id: string;
+  name: string;
+  active: boolean;
+}
+
 // ============================================
 // CAMPUSES & BUILDINGS HELPERS
 // ============================================
@@ -343,7 +290,7 @@ export const subscribeToNewItems = (
         table: 'items',
         filter: `campus_id=eq.${campusId}`
       },
-      (payload) => {
+      (payload: any) => {
         callback(payload.new as Item);
       }
     )
