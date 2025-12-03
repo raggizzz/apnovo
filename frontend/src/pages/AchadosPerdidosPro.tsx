@@ -1,696 +1,252 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import styles from "./AchadosPerdidosPro.module.css";
+import { AccessibilityControls } from "../components/AccessibilityControls";
+import { ItemFormModal } from "../components/ItemFormModal";
+import { ItemDetailsModal } from "../components/ItemDetailsModal";
 
+// Types
 interface Item {
   id: string;
   title: string;
   description: string;
   category: string;
-  color: string;
-  campus: string;
-  building: string;
-  date: string;
-  status: "found" | "lost";
-  photoUrl?: string;
-  timestamp?: Date;
+  location: string;
+  created_at: string;
+  type: 'LOST' | 'FOUND';
+  status: 'OPEN' | 'RESOLVED' | 'EXPIRED';
+  image_url?: string;
+  building_name?: string;
+  campus_name?: string;
 }
 
-// Função para calcular tempo relativo
-const getRelativeTime = (date: Date): string => {
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-
-  if (minutes < 60) return `Há ${minutes} min`;
-  if (hours < 24) return `Há ${hours}h`;
-  if (days === 1) return "Ontem";
-  return `Há ${days} dias`;
-};
-
-const CATEGORIES = [
-  { id: "eletronicos", name: "Eletrônicos", icon: "📱" },
-  { id: "documentos", name: "Documentos", icon: "📄" },
-  { id: "chaves", name: "Chaves", icon: "🔑" },
-  { id: "acessorios", name: "Acessórios", icon: "👜" },
-  { id: "outros", name: "Outros", icon: "📦" }
-];
-
-const COLORS = ["Preto", "Branco", "Azul", "Verde", "Vermelho", "Amarelo", "Cinza", "Marrom", "Rosa", "Roxo"];
-
 export function AchadosPerdidosPro() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCampus, setSelectedCampus] = useState("todos");
-  const [selectedCategory, setSelectedCategory] = useState("todos");
-  const [selectedStatus, setSelectedStatus] = useState<"todos" | "found" | "lost">("todos");
-  const [showFilters, setShowFilters] = useState(false);
-  const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isLostPage = location.pathname === "/lost";
+
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<"recent" | "relevant">("recent");
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
-  // Carregar items do Supabase
+  // Fetch items
   useEffect(() => {
-    loadItems();
-  }, []);
+    fetchItems();
+  }, [isLostPage]);
 
-  const loadItems = async () => {
+  async function fetchItems() {
+    setLoading(true);
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('items')
-        .select(`
-          *,
-          item_photos (
-            url,
-            position
-          )
-        `)
+        .select('*')
+        .eq('type', isLostPage ? 'LOST' : 'FOUND')
         .eq('status', 'OPEN')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
-      console.log('Loaded items:', data);
-
-      const formattedItems: Item[] = (data || []).map((item: any) => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        category: item.category,
-        color: item.color || 'N/A',
-        campus: item.campus_name,
-        building: item.building_name,
-        date: getRelativeTime(new Date(item.created_at)),
-        status: item.type.toLowerCase() as "found" | "lost",
-        photoUrl: item.item_photos?.[0]?.url || null,
-        timestamp: new Date(item.created_at)
-      }));
-
-      console.log('Formatted items:', formattedItems);
-      setItems(formattedItems);
+      setItems(data || []);
     } catch (error) {
-      console.error('Erro ao carregar items:', error);
+      console.error('Error fetching items:', error);
     } finally {
       setLoading(false);
     }
-  };
-  
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    category: "",
-    color: "",
-    campus: "",
-    building: "",
-    status: "found" as "found" | "lost",
-    photo: null as File | null,
-    photoPreview: "" as string
-  });
-
-  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFormData(prev => ({
-        ...prev,
-        photo: file,
-        photoPreview: URL.createObjectURL(file)
-      }));
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      // 1. Upload da foto se houver
-      let photoUrl = "";
-      if (formData.photo) {
-        const fileExt = formData.photo.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        
-        console.log('Uploading photo:', fileName);
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('items-photos')
-          .upload(fileName, formData.photo, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) {
-          console.error('Upload error:', uploadError);
-          throw uploadError;
-        }
-
-        console.log('Upload success:', uploadData);
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('items-photos')
-          .getPublicUrl(fileName);
-
-        photoUrl = publicUrl;
-        console.log('Public URL:', photoUrl);
-      }
-
-      // 2. Criar item no Supabase
-      const { data, error } = await supabase
-        .from('items')
-        .insert({
-          title: formData.title,
-          description: formData.description,
-          category: formData.category,
-          color: formData.color,
-          campus_name: formData.campus,
-          building_name: formData.building,
-          type: formData.status.toUpperCase(),
-          status: 'OPEN'
-          // owner_id será NULL (sem autenticação por enquanto)
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // 3. Adicionar foto se houver
-      if (photoUrl && data) {
-        console.log('Saving photo to database:', { item_id: data.id, url: photoUrl });
-        const { data: photoData, error: photoError } = await supabase
-          .from('item_photos')
-          .insert({
-            item_id: data.id,
-            url: photoUrl,
-            position: 0
-          })
-          .select();
-
-        if (photoError) {
-          console.error('Photo insert error:', photoError);
-        } else {
-          console.log('Photo saved:', photoData);
-        }
-      }
-
-      // 4. Recarregar lista
-      await loadItems();
-      setShowRegisterModal(false);
-      
-      // Reset form
-      setFormData({
-        title: "",
-        description: "",
-        category: "",
-        color: "",
-        campus: "",
-        building: "",
-        status: "found",
-        photo: null,
-        photoPreview: ""
-      });
-    } catch (error) {
-      console.error('Erro ao cadastrar item:', error);
-      alert('Erro ao cadastrar objeto. Tente novamente.');
-    }
-  };
-
-  const handleViewDetails = (item: Item) => {
-    setSelectedItem(item);
-    setShowDetailModal(true);
-  };
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setSelectedCampus("todos");
-    setSelectedCategory("todos");
-    setSelectedStatus("todos");
-  };
-
-  const activeFiltersCount = [
-    selectedCampus !== "todos",
-    selectedCategory !== "todos",
-    selectedStatus !== "todos",
-    searchTerm !== ""
-  ].filter(Boolean).length;
-
-  let filteredItems = items.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.building.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCampus = selectedCampus === "todos" || item.campus === selectedCampus;
-    const matchesCategory = selectedCategory === "todos" || item.category.toLowerCase() === selectedCategory;
-    const matchesStatus = selectedStatus === "todos" || item.status === selectedStatus;
-    
-    return matchesSearch && matchesCampus && matchesCategory && matchesStatus;
-  });
-
-  if (sortBy === "recent") {
-    filteredItems = filteredItems.sort((a, b) => 
-      (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0)
-    );
   }
+
+  // Filter items
+  const filteredItems = items.filter(item =>
+    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (item.location && item.location.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (item.building_name && item.building_name.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const handleAudioDescription = (e: React.MouseEvent, item: Item) => {
+    e.stopPropagation();
+    window.speechSynthesis.cancel(); // Stop any previous speech
+
+    const locationText = item.location || item.building_name || "Local não informado";
+
+    // Clean description (remove "Data: ...")
+    const cleanDescription = item.description.replace(/Data: \d{2}\/\d{2}\/\d{4}\n\n/, '').trim();
+
+    // Extract date if possible
+    const dateMatch = item.description.match(/Data: (\d{2}\/\d{2}\/\d{4})/);
+    const dateText = dateMatch ? dateMatch[1] : new Date(item.created_at).toLocaleDateString();
+
+    const text = `Item: ${item.title}. Categoria: ${item.category}. Data: ${dateText}. Local: ${locationText}. Descrição: ${cleanDescription}`;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'pt-BR';
+    window.speechSynthesis.speak(utterance);
+  };
 
   return (
     <div className={styles.page}>
+      {/* Header */}
       <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <img src="/src/components/images/undflogo.png" alt="UnDF" className={styles.logo} />
-          <nav className={styles.nav}>
-            <a href="/">Início</a>
-            <a href="/lost" className={styles.active}>Achados e Perdidos</a>
-          </nav>
+        <div className={styles.container}>
+          <div className={styles.headerContent}>
+            <div className={styles.logo} onClick={() => navigate("/")}>
+              <div className={styles.logoIcon}></div>
+              UnDF Connect
+            </div>
+            <nav className={styles.nav}>
+              <a
+                href="#"
+                className={`${styles.navLink} ${isLostPage ? styles.active : ''}`}
+                onClick={(e) => { e.preventDefault(); navigate("/lost"); }}
+              >
+                Perdidos
+              </a>
+              <a
+                href="#"
+                className={`${styles.navLink} ${!isLostPage ? styles.active : ''}`}
+                onClick={(e) => { e.preventDefault(); navigate("/found"); }}
+              >
+                Achados
+              </a>
+            </nav>
+          </div>
         </div>
       </header>
 
+      {/* Main Content */}
       <main className={styles.main}>
         <div className={styles.container}>
-          <div className={styles.hero}>
-            <h1>Achados e Perdidos</h1>
-            <p>Achou algo? Publique em 30 segundos. Perdeu? Ative um alerta e nós avisamos você.</p>
-          </div>
 
+          {/* Toolbar */}
           <div className={styles.toolbar}>
-            <div className={styles.searchWrapper}>
-              <div className={styles.searchBar}>
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="2"/>
-                  <path d="M13 13L17 17" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            <h1 className={styles.pageTitle}>
+              {isLostPage ? "Itens Perdidos" : "Itens Encontrados"}
+            </h1>
+
+            <div className={styles.controls}>
+              <div className={styles.searchWrapper}>
+                <svg className={styles.searchIcon} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
                 <input
                   type="text"
-                  placeholder="Buscar por 'mochila preta', 'RU', 'Biblioteca Bloco A'..."
+                  className={styles.searchInput}
+                  placeholder="Buscar por nome, local ou categoria..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
-                {searchTerm && (
-                  <button className={styles.clearBtn} onClick={() => setSearchTerm("")}>×</button>
-                )}
               </div>
-              
-              <button className={styles.btnDesktopAdd} onClick={() => setShowRegisterModal(true)}>
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M10 4V16M4 10H16" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-                Cadastrar Objeto
-              </button>
-            </div>
 
-            <div className={styles.filterBar}>
-              <button 
-                className={`${styles.filterToggle} ${showFilters ? styles.active : ''}`}
-                onClick={() => setShowFilters(!showFilters)}
-              >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M2 4H14M4 8H12M6 12H10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <button className={styles.filterBtn}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="4" y1="21" x2="4" y2="14"></line>
+                  <line x1="4" y1="10" x2="4" y2="3"></line>
+                  <line x1="12" y1="21" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12" y2="3"></line>
+                  <line x1="20" y1="21" x2="20" y2="16"></line>
+                  <line x1="20" y1="12" x2="20" y2="3"></line>
+                  <line x1="1" y1="14" x2="7" y2="14"></line>
+                  <line x1="9" y1="8" x2="15" y2="8"></line>
+                  <line x1="17" y1="16" x2="23" y2="16"></line>
                 </svg>
                 Filtros
-                {activeFiltersCount > 0 && (
-                  <span className={styles.filterBadge}>{activeFiltersCount}</span>
-                )}
               </button>
 
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className={styles.sortSelect}>
-                <option value="recent">Mais recentes</option>
-                <option value="relevant">Mais relevantes</option>
-              </select>
+              <button className={styles.addBtn} onClick={() => setShowModal(true)}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                {isLostPage ? "Relatar Perda" : "Relatar Achado"}
+              </button>
             </div>
           </div>
 
-          {showFilters && (
-            <div className={styles.filtersPanel}>
-              <div className={styles.filterGroup}>
-                <label>Campus</label>
-                <select value={selectedCampus} onChange={(e) => setSelectedCampus(e.target.value)}>
-                  <option value="todos">Todos</option>
-                  <option value="Asa Norte">Asa Norte</option>
-                  <option value="Samambaia">Samambaia</option>
-                  <option value="Riacho Fundo">Riacho Fundo</option>
-                  <option value="Lago Norte">Lago Norte</option>
-                </select>
-              </div>
-
-              <div className={styles.filterGroup}>
-                <label>Categoria</label>
-                <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}>
-                  <option value="todos">Todas</option>
-                  <option value="eletrônicos">Eletrônicos</option>
-                  <option value="documentos">Documentos</option>
-                  <option value="chaves">Chaves</option>
-                  <option value="acessórios">Acessórios</option>
-                  <option value="outros">Outros</option>
-                </select>
-              </div>
-
-              <div className={styles.filterGroup}>
-                <label>Status</label>
-                <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value as any)}>
-                  <option value="todos">Todos</option>
-                  <option value="found">Encontrados</option>
-                  <option value="lost">Perdidos</option>
-                </select>
-              </div>
-            </div>
-          )}
-
-          {activeFiltersCount > 0 && (
-            <div className={styles.activeFilters}>
-              <span className={styles.filterLabel}>Filtros ativos:</span>
-              {searchTerm && (
-                <button className={styles.filterChip} onClick={() => setSearchTerm("")}>
-                  "{searchTerm}" ×
-                </button>
-              )}
-              {selectedCampus !== "todos" && (
-                <button className={styles.filterChip} onClick={() => setSelectedCampus("todos")}>
-                  {selectedCampus} ×
-                </button>
-              )}
-              {selectedCategory !== "todos" && (
-                <button className={styles.filterChip} onClick={() => setSelectedCategory("todos")}>
-                  {selectedCategory} ×
-                </button>
-              )}
-              {selectedStatus !== "todos" && (
-                <button className={styles.filterChip} onClick={() => setSelectedStatus("todos")}>
-                  {selectedStatus === "found" ? "Encontrados" : "Perdidos"} ×
-                </button>
-              )}
-              <button className={styles.clearAllBtn} onClick={clearFilters}>
-                Limpar todos
-              </button>
-            </div>
-          )}
-
-          <div className={styles.resultsBar}>
-            <p>
-              <strong>{filteredItems.length}</strong> {filteredItems.length === 1 ? 'resultado' : 'resultados'}
-              <span className={styles.separator}>·</span>
-              ordenado por {sortBy === "recent" ? "mais recentes" : "relevância"}
-              {activeFiltersCount > 0 && (
-                <>
-                  <span className={styles.separator}>·</span>
-                  <button className={styles.linkBtn} onClick={clearFilters}>limpar filtros</button>
-                </>
-              )}
-            </p>
-          </div>
-
-          {loading ? (
-            <div className={styles.loading}>
-              <div className={styles.spinner}></div>
-              <p>Carregando objetos...</p>
-            </div>
-          ) : filteredItems.length > 0 ? (
-            <div className={styles.grid}>
-              {filteredItems.map((item) => (
-                <div key={item.id} className={styles.card}>
-                  <div className={styles.cardImage}>
-                    {item.photoUrl ? (
-                      <img src={item.photoUrl} alt={item.title} />
-                    ) : (
-                      <div className={styles.placeholder}>
-                        {item.category === "Eletrônicos" && "📱"}
-                        {item.category === "Documentos" && "📄"}
-                        {item.category === "Chaves" && "🔑"}
-                        {item.category === "Outros" && "📦"}
-                      </div>
-                    )}
-                    <span className={`${styles.statusBadge} ${styles[item.status]}`}>
-                      {item.status === "found" ? "✓ ENCONTRADO" : "⚠ PERDIDO"}
+          {/* Grid */}
+          <div className={styles.grid}>
+            {loading ? (
+              <p>Carregando itens...</p>
+            ) : filteredItems.length > 0 ? (
+              filteredItems.map((item) => (
+                <div
+                  key={item.id}
+                  className={styles.card}
+                  onClick={() => setSelectedItem(item)}
+                >
+                  <div className={styles.cardImageWrapper}>
+                    <span className={`${styles.cardStatus} ${item.type === 'LOST' ? styles.statusLost : styles.statusFound}`}>
+                      {item.type === 'LOST' ? 'Perdido' : 'Encontrado'}
                     </span>
+                    <img
+                      src={item.image_url || "https://placehold.co/600x400/f1f5f9/94a3b8?text=Sem+Foto"}
+                      alt={item.title}
+                      className={styles.cardImage}
+                    />
                   </div>
-                  
-                  <div className={styles.cardBody}>
+                  <div className={styles.cardContent}>
+                    <span className={styles.cardCategory}>{item.category}</span>
                     <h3 className={styles.cardTitle}>{item.title}</h3>
-                    <p className={styles.cardDescription}>{item.description}</p>
-                    
                     <div className={styles.cardMeta}>
-                      <span>🕐 {item.date}</span>
-                      <span className={styles.separator}>·</span>
-                      <span>📍 {item.building} · {item.campus}</span>
+                      <div className={styles.cardMetaItem}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                          <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        {item.location || item.building_name || "Local não informado"}
+                      </div>
+                      <div className={styles.cardMetaItem}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        {new Date(item.created_at || Date.now()).toLocaleDateString()}
+                      </div>
                     </div>
 
-                    <div className={styles.cardTags}>
-                      <span className={styles.tag}>{item.category}</span>
-                      <span className={styles.tag}>{item.color}</span>
-                    </div>
-
-                    <button className={styles.cardBtn} onClick={() => handleViewDetails(item)}>
-                      Ver detalhes
+                    {/* Audio Description Button */}
+                    <button
+                      className={styles.audioBtn}
+                      onClick={(e) => handleAudioDescription(e, item)}
+                      title="Ouvir descrição"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                      </svg>
+                      Ouvir
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.empty}>
-              <div className={styles.emptyIcon}>🔍</div>
-              <h3>Nenhum item encontrado</h3>
-              <p>Tente buscar por 'carteira marrom', 'Biblioteca' ou ajuste os filtros</p>
-              <button className={styles.btnPrimary} onClick={() => setShowRegisterModal(true)}>
-                Cadastrar Objeto
-              </button>
-            </div>
-          )}
+              ))
+            ) : (
+              <div className={styles.emptyState}>
+                <p>Nenhum item encontrado.</p>
+              </div>
+            )}
+          </div>
+
         </div>
       </main>
 
-      {/* FAB Mobile */}
-      <button className={styles.fab} onClick={() => setShowRegisterModal(true)}>
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 5V19M5 12H19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
-        </svg>
-      </button>
+      {/* Form Modal */}
+      <ItemFormModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        type={isLostPage ? 'lost' : 'found'}
+        onSuccess={() => {
+          fetchItems();
+        }}
+      />
 
-      {/* Register Modal */}
-      {showRegisterModal && (
-        <div className={styles.modal} onClick={() => setShowRegisterModal(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h2>Cadastrar Objeto</h2>
-              <button className={styles.modalClose} onClick={() => setShowRegisterModal(false)}>×</button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className={styles.form}>
-              <div className={styles.photoSection}>
-                <p className={styles.photoHint}>Foto horizontal, enquadre o objeto, fundo neutro</p>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handlePhotoSelect}
-                  style={{ display: 'none' }}
-                />
-                {formData.photoPreview ? (
-                  <div className={styles.photoPreview}>
-                    <img src={formData.photoPreview} alt="Preview" />
-                    <button
-                      type="button"
-                      className={styles.photoRemove}
-                      onClick={() => setFormData(prev => ({ ...prev, photo: null, photoPreview: "" }))}
-                    >
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    className={styles.photoButton}
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
-                      <rect width="48" height="48" rx="24" fill="#E8F4FF"/>
-                      <path d="M24 18V30M18 24H30" stroke="#2B5C9E" strokeWidth="2" strokeLinecap="round"/>
-                    </svg>
-                    <span>Adicionar Foto</span>
-                  </button>
-                )}
-              </div>
+      {/* Details Modal */}
+      <ItemDetailsModal
+        isOpen={!!selectedItem}
+        onClose={() => setSelectedItem(null)}
+        item={selectedItem}
+      />
 
-              <div className={styles.segmentedControl}>
-                <button
-                  type="button"
-                  className={formData.status === "found" ? styles.active : ""}
-                  onClick={() => setFormData(prev => ({ ...prev, status: "found" }))}
-                >
-                  Encontrei
-                </button>
-                <button
-                  type="button"
-                  className={formData.status === "lost" ? styles.active : ""}
-                  onClick={() => setFormData(prev => ({ ...prev, status: "lost" }))}
-                >
-                  Perdi
-                </button>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Título *</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="Ex: iPhone 13 Pro Azul"
-                  required
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Descrição *</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Descreva características específicas..."
-                  rows={3}
-                  required
-                />
-                <span className={styles.hint}>Evite dados sensíveis, ex.: CPF completo</span>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Categoria *</label>
-                <div className={styles.chipGroup}>
-                  {CATEGORIES.map(cat => (
-                    <button
-                      key={cat.id}
-                      type="button"
-                      className={`${styles.chip} ${formData.category === cat.name ? styles.active : ""}`}
-                      onClick={() => setFormData(prev => ({ ...prev, category: cat.name }))}
-                    >
-                      {cat.icon} {cat.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Cor *</label>
-                <div className={styles.chipGroup}>
-                  {COLORS.map(color => (
-                    <button
-                      key={color}
-                      type="button"
-                      className={`${styles.chip} ${formData.color === color ? styles.active : ""}`}
-                      onClick={() => setFormData(prev => ({ ...prev, color }))}
-                    >
-                      {color}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className={styles.formRow}>
-                <div className={styles.formGroup}>
-                  <label>Campus *</label>
-                  <select
-                    value={formData.campus}
-                    onChange={(e) => setFormData(prev => ({ ...prev, campus: e.target.value }))}
-                    required
-                  >
-                    <option value="">Selecione...</option>
-                    <option value="Asa Norte">Asa Norte</option>
-                    <option value="Samambaia">Samambaia</option>
-                    <option value="Riacho Fundo">Riacho Fundo</option>
-                    <option value="Lago Norte">Lago Norte</option>
-                  </select>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label>Local *</label>
-                  <input
-                    type="text"
-                    value={formData.building}
-                    onChange={(e) => setFormData(prev => ({ ...prev, building: e.target.value }))}
-                    placeholder="Biblioteca, Bloco A, RU..."
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className={styles.formActions}>
-                <button type="button" className={styles.btnSecondary} onClick={() => setShowRegisterModal(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className={styles.btnPrimary}>
-                  Publicar
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Detail Modal */}
-      {showDetailModal && selectedItem && (
-        <div className={styles.modal} onClick={() => setShowDetailModal(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h2>Detalhes do Objeto</h2>
-              <button className={styles.modalClose} onClick={() => setShowDetailModal(false)}>×</button>
-            </div>
-            
-            <div className={styles.detailContent}>
-              {selectedItem.photoUrl ? (
-                <img src={selectedItem.photoUrl} alt={selectedItem.title} className={styles.detailPhoto} />
-              ) : (
-                <div className={styles.detailPlaceholder}>
-                  {selectedItem.category === "Eletrônicos" && "📱"}
-                  {selectedItem.category === "Documentos" && "📄"}
-                  {selectedItem.category === "Chaves" && "🔑"}
-                  {selectedItem.category === "Outros" && "📦"}
-                </div>
-              )}
-              
-              <div className={styles.detailBody}>
-                <span className={`${styles.statusBadge} ${styles[selectedItem.status]}`}>
-                  {selectedItem.status === "found" ? "✓ ENCONTRADO" : "⚠ PERDIDO"}
-                </span>
-                
-                <h3>{selectedItem.title}</h3>
-                <p className={styles.detailDescription}>{selectedItem.description}</p>
-                
-                <div className={styles.detailGrid}>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Categoria</span>
-                    <span className={styles.detailValue}>{selectedItem.category}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Cor</span>
-                    <span className={styles.detailValue}>{selectedItem.color}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Campus</span>
-                    <span className={styles.detailValue}>{selectedItem.campus}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Local</span>
-                    <span className={styles.detailValue}>{selectedItem.building}</span>
-                  </div>
-                  <div className={styles.detailItem}>
-                    <span className={styles.detailLabel}>Data</span>
-                    <span className={styles.detailValue}>{selectedItem.date}</span>
-                  </div>
-                </div>
-
-                <div className={styles.securityNote}>
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 1L3 3V7C3 10.5 5.5 13.5 8 15C10.5 13.5 13 10.5 13 7V3L8 1Z" stroke="currentColor" strokeWidth="1.5"/>
-                  </svg>
-                  <p>Para sua segurança, o contato ocorre por chat interno. Dados pessoais só são exibidos com consentimento.</p>
-                </div>
-                
-                <button className={styles.btnPrimary}>
-                  Entrar em Contato
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <AccessibilityControls />
     </div>
   );
 }

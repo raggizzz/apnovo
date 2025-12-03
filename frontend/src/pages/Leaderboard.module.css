@@ -1,0 +1,331 @@
+/* ============================================
+   AGENCY PERFECTION - LEADERBOARD
+   Premium | Gamified | Hall of Fame
+   ============================================ */
+
+.page {
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--white);
+    color: var(--slate-900);
+    font-family: var(--font-body);
+    position: relative;
+}
+
+.page::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+}
+
+.container {
+    width: 100%;
+    max-width: 1000px;
+    /* Narrower for focus */
+    margin: 0 auto;
+    padding: 0 var(--space-6);
+}
+
+.main {
+    padding-top: 100px;
+    padding-bottom: 80px;
+}
+
+/* Header (Consistent) */
+.header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 72px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--slate-200);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+}
+
+.headerContent {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.logo {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--slate-900);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.logoIcon {
+    width: 20px;
+    height: 20px;
+    background: var(--brand-primary);
+    border-radius: 5px;
+}
+
+.nav {
+    display: flex;
+    gap: 4px;
+    background: var(--slate-100);
+    padding: 4px;
+    border-radius: 10px;
+}
+
+.navLink {
+    padding: 6px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--slate-500);
+    text-decoration: none;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.navLink:hover {
+    color: var(--slate-900);
+    background: rgba(255, 255, 255, 0.5);
+}
+
+.navLink.active {
+    background: #fff;
+    color: var(--brand-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Page Title */
+.pageHeader {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.pageHeader h1 {
+    font-size: 40px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--slate-900);
+    margin-bottom: 16px;
+}
+
+.pageHeader p {
+    font-size: 18px;
+    color: var(--slate-500);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Podium */
+.podium {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 24px;
+    margin-bottom: 80px;
+    height: 300px;
+}
+
+.podiumSpot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+}
+
+.podiumSpot.first {
+    order: 2;
+    z-index: 2;
+}
+
+.podiumSpot.second {
+    order: 1;
+    z-index: 1;
+}
+
+.podiumSpot.third {
+    order: 3;
+    z-index: 1;
+}
+
+.avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: var(--slate-200);
+    margin-bottom: 16px;
+    border: 4px solid #fff;
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+}
+
+.first .avatar {
+    width: 100px;
+    height: 100px;
+    border-color: #fbbf24;
+}
+
+.second .avatar {
+    border-color: #94a3b8;
+}
+
+.third .avatar {
+    border-color: #b45309;
+}
+
+.podiumBase {
+    width: 120px;
+    background: linear-gradient(to bottom, #fff, var(--slate-50));
+    border: 1px solid var(--slate-200);
+    border-bottom: none;
+    border-radius: 16px 16px 0 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.first .podiumBase {
+    height: 180px;
+    background: linear-gradient(to bottom, #fff, #fffbeb);
+    border-color: #fcd34d;
+}
+
+.second .podiumBase {
+    height: 140px;
+}
+
+.third .podiumBase {
+    height: 110px;
+}
+
+.rank {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--slate-400);
+    margin-bottom: 8px;
+}
+
+.first .rank {
+    color: #d97706;
+    font-size: 32px;
+}
+
+.second .rank {
+    color: #64748b;
+}
+
+.third .rank {
+    color: #92400e;
+}
+
+.playerName {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--slate-900);
+    text-align: center;
+    margin-bottom: 4px;
+}
+
+.playerPoints {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--brand-primary);
+    background: var(--brand-light);
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* List */
+.list {
+    background: #fff;
+    border-radius: 24px;
+    border: 1px solid var(--slate-200);
+    overflow: hidden;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05);
+}
+
+.listItem {
+    display: flex;
+    align-items: center;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--slate-100);
+    transition: background 0.2s ease;
+}
+
+.listItem:last-child {
+    border-bottom: none;
+}
+
+.listItem:hover {
+    background: var(--slate-50);
+}
+
+.listRank {
+    width: 40px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--slate-400);
+}
+
+.listAvatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--slate-100);
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.listInfo {
+    flex: 1;
+}
+
+.listName {
+    font-weight: 600;
+    color: var(--slate-900);
+    display: block;
+}
+
+.listTitle {
+    font-size: 12px;
+    color: var(--slate-500);
+}
+
+.listPoints {
+    font-weight: 700;
+    color: var(--brand-primary);
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    .podium {
+        gap: 12px;
+    }
+
+    .podiumBase {
+        width: 90px;
+    }
+}

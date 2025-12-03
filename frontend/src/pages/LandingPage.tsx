@@ -1,123 +1,155 @@
-import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import styles from "./LandingPage.module.css";
 
 export function LandingPage() {
   const navigate = useNavigate();
-  const [scrolled, setScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const features = [
     {
       icon: "🔍",
       title: "Busca Inteligente",
-      description: "Encontre objetos perdidos com tecnologia de busca avançada por categoria, cor e localização."
+      description: "Algoritmos avançados que conectam quem perdeu a quem encontrou em segundos."
     },
     {
-      icon: "📱",
-      title: "Notificações em Tempo Real",
-      description: "Receba alertas instantâneos quando um objeto correspondente for encontrado no campus."
+      icon: "🛡️",
+      title: "Segurança Verificada",
+      description: "Identidade confirmada via login institucional para garantir trocas seguras."
     },
     {
-      icon: "🗺️",
-      title: "Geolocalização Precisa",
-      description: "Identifique exatamente onde o objeto foi perdido ou encontrado com mapas interativos."
-    },
-    {
-      icon: "💬",
-      title: "Chat Seguro",
-      description: "Comunique-se diretamente com quem encontrou seu objeto de forma segura e privada."
-    },
-    {
-      icon: "🔐",
-      title: "100% Seguro",
-      description: "Seus dados protegidos com autenticação e criptografia de ponta a ponta."
+      icon: "📍",
+      title: "Geolocalização",
+      description: "Mapeamento preciso de onde os objetos foram encontrados no campus."
     },
     {
       icon: "⚡",
-      title: "Rápido e Fácil",
-      description: "Cadastre objetos em menos de 2 minutos com nosso fluxo intuitivo de 3 passos."
+      title: "Notificações Reais",
+      description: "Alertas instantâneos quando um objeto correspondente é cadastrado."
+    },
+    {
+      icon: "📱",
+      title: "Mobile First",
+      description: "Experiência perfeita em qualquer dispositivo, para usar em movimento."
+    },
+    {
+      icon: "🤝",
+      title: "Comunidade",
+      description: "Fomentando a honestidade e colaboração entre estudantes e servidores."
     }
   ];
 
+  // Mock data for the live feed animation
+  const feedItems = [
+    { icon: "📱", title: "iPhone 13 Pro", location: "Biblioteca", time: "2m", type: "lost" },
+    { icon: "🔑", title: "Chaves de Carro", location: "Estacionamento", time: "5m", type: "found" },
+    { icon: "🎧", title: "AirPods Pro", location: "Cantina", time: "12m", type: "lost" },
+    { icon: "📘", title: "Caderno Cálculo", location: "Bloco C", time: "15m", type: "found" },
+    { icon: "🕶️", title: "Óculos RayBan", location: "Auditório", time: "28m", type: "lost" },
+    { icon: "🎒", title: "Mochila Dell", location: "Laboratório 3", time: "45m", type: "found" },
+    { icon: "💳", title: "Cartão Nubank", location: "Secretaria", time: "1h", type: "lost" },
+    { icon: "🧥", title: "Casaco Jeans", location: "Pátio Central", time: "2h", type: "found" },
+  ];
+
+  // Duplicate items for infinite scroll effect
+  const column1 = [...feedItems, ...feedItems];
+  const column2 = [...feedItems.reverse(), ...feedItems.reverse()];
+
   return (
     <div className={styles.landing}>
-      {/* Header */}
-      <header className={`${styles.header} ${scrolled ? styles.scrolled : ""}`}>
-        <div className={styles.headerContent}>
-          <div className={styles.logo}>
-            <img src="/src/components/images/undflogo.png" alt="UnDF" className={styles.logoImage} />
+      {/* Navigation */}
+      <nav className={styles.nav}>
+        <div className={styles.container}>
+          <div className={styles.navContent}>
+            <a href="#" className={styles.logo}>
+              <div className={styles.logoIcon}></div>
+              UnDF Connect
+            </a>
+            <div className={styles.navLinks}>
+              <a href="/lost" className={styles.navLink}>Perdidos</a>
+              <a href="/found" className={styles.navLink}>Achados</a>
+              <button className={styles.navBtn} onClick={() => navigate("/login")}>
+                Acessar Sistema
+              </button>
+            </div>
           </div>
-          <nav className={styles.nav}>
-            <a href="#features">Recursos</a>
-            <a href="#how-it-works">Como Funciona</a>
-            <button className={styles.btnLogin} onClick={() => navigate("/login")}>
-              Entrar
-            </button>
-          </nav>
         </div>
-      </header>
+      </nav>
 
       {/* Hero Section */}
       <section className={styles.hero}>
-        <div className={styles.heroBackground}>
-          <div className={styles.heroShape1}></div>
-          <div className={styles.heroShape2}></div>
-          <div className={styles.heroShape3}></div>
-        </div>
-        <div className={styles.heroContent}>
-          <div className={styles.heroText}>
-            <h1 className={styles.heroTitle}>
-              Perdeu algo no campus?
-              <span className={styles.heroTitleHighlight}> Nós ajudamos você a encontrar.</span>
-            </h1>
-            <p className={styles.heroSubtitle}>
-              Sistema inteligente de achados e perdidos da UnDF. Conecte-se com quem encontrou seu objeto
-              em segundos com tecnologia de busca avançada e notificações em tempo real.
-            </p>
-            <div className={styles.heroButtons}>
-              <button className={styles.btnPrimary} onClick={() => navigate("/lost")}>
-                <span>Perdi um Objeto</span>
-                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                  <path d="M7.5 15L12.5 10L7.5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </button>
-              <button className={styles.btnSecondary} onClick={() => navigate("/found")}>
-                <span>Encontrei um Objeto</span>
-              </button>
+        <div className={styles.container}>
+          <div className={styles.heroContent}>
+            <div className={styles.heroText}>
+              <h1>
+                O jeito mais simples de encontrar o que você <span>perdeu</span>.
+              </h1>
+              <p className={styles.heroSubtitle}>
+                O sistema oficial de Achados e Perdidos da UnDF.
+                Conectando a comunidade acadêmica com eficiência, segurança e tecnologia.
+              </p>
+              <div className={styles.heroButtons}>
+                <button className={styles.btnPrimary} onClick={() => navigate("/lost")}>
+                  Perdi algo
+                </button>
+                <button className={styles.btnSecondary} onClick={() => navigate("/found")}>
+                  Encontrei algo
+                </button>
+              </div>
+            </div>
+
+            {/* Animated Live Feed */}
+            <div className={styles.heroVisual}>
+              <div className={styles.feedColumn}>
+                {column1.map((item, i) => (
+                  <div key={`col1-${i}`} className={styles.feedCard}>
+                    <div className={styles.feedIcon}>{item.icon}</div>
+                    <div className={styles.feedContent}>
+                      <div className={styles.feedTitle}>{item.title}</div>
+                      <div className={styles.feedMeta}>
+                        <span>{item.location}</span>
+                        <span className={`${styles.feedStatus} ${item.type === 'lost' ? styles.statusLost : styles.statusFound}`}>
+                          {item.type === 'lost' ? 'PERDIDO' : 'ACHADO'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className={styles.feedColumn}>
+                {column2.map((item, i) => (
+                  <div key={`col2-${i}`} className={styles.feedCard}>
+                    <div className={styles.feedIcon}>{item.icon}</div>
+                    <div className={styles.feedContent}>
+                      <div className={styles.feedTitle}>{item.title}</div>
+                      <div className={styles.feedMeta}>
+                        <span>{item.location}</span>
+                        <span className={`${styles.feedStatus} ${item.type === 'lost' ? styles.statusLost : styles.statusFound}`}>
+                          {item.type === 'lost' ? 'PERDIDO' : 'ACHADO'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-          <div className={styles.heroImage}>
-            <div className={styles.heroCard}>
-              <div className={styles.heroCardIcon}>🔑</div>
-              <div className={styles.heroCardContent}>
-                <h3>Chaves Encontradas</h3>
-                <p>Bloco A - Sala 203</p>
-                <span className={styles.heroCardTime}>Há 5 minutos</span>
-              </div>
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className={styles.stats}>
+        <div className={styles.container}>
+          <div className={styles.statsGrid}>
+            <div className={styles.statItem}>
+              <span className={styles.statNumber}>Todos</span>
+              <span className={styles.statLabel}>da UNDF</span>
             </div>
-            <div className={`${styles.heroCard} ${styles.heroCard2}`}>
-              <div className={styles.heroCardIcon}>📱</div>
-              <div className={styles.heroCardContent}>
-                <h3>Celular iPhone</h3>
-                <p>Biblioteca Central</p>
-                <span className={styles.heroCardTime}>Há 1 hora</span>
-              </div>
+            <div className={styles.statItem}>
+              <span className={styles.statNumber}>3min</span>
+              <span className={styles.statLabel}>tempo medio para colocar algum item</span>
             </div>
-            <div className={`${styles.heroCard} ${styles.heroCard3}`}>
-              <div className={styles.heroCardIcon}>🎒</div>
-              <div className={styles.heroCardContent}>
-                <h3>Mochila Azul</h3>
-                <p>Cantina Principal</p>
-                <span className={styles.heroCardTime}>Há 3 horas</span>
-              </div>
+            <div className={styles.statItem}>
+              <span className={styles.statNumber}>24/7</span>
+              <span className={styles.statLabel}>disponibilidade</span>
             </div>
           </div>
         </div>
@@ -127,10 +159,10 @@ export function LandingPage() {
       <section id="features" className={styles.features}>
         <div className={styles.container}>
           <div className={styles.sectionHeader}>
-            <span className={styles.sectionTag}>Recursos</span>
-            <h2 className={styles.sectionTitle}>Tudo que você precisa em um só lugar</h2>
-            <p className={styles.sectionSubtitle}>
-              Tecnologia de ponta para conectar pessoas e objetos perdidos de forma rápida e segura
+            <span className={styles.sectionTag}>Por que usar?</span>
+            <h2 className={styles.sectionTitle}>Tecnologia a favor da comunidade</h2>
+            <p className={styles.sectionDesc}>
+              Desenvolvemos uma plataforma robusta para resolver um problema antigo de forma moderna.
             </p>
           </div>
           <div className={styles.featuresGrid}>
@@ -138,73 +170,23 @@ export function LandingPage() {
               <div key={index} className={styles.featureCard}>
                 <div className={styles.featureIcon}>{feature.icon}</div>
                 <h3 className={styles.featureTitle}>{feature.title}</h3>
-                <p className={styles.featureDescription}>{feature.description}</p>
+                <p className={styles.featureText}>{feature.description}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section id="how-it-works" className={styles.howItWorks}>
-        <div className={styles.container}>
-          <div className={styles.sectionHeader}>
-            <span className={styles.sectionTag}>Processo</span>
-            <h2 className={styles.sectionTitle}>Como funciona?</h2>
-            <p className={styles.sectionSubtitle}>
-              Três passos simples para recuperar seu objeto perdido
-            </p>
-          </div>
-          <div className={styles.stepsGrid}>
-            <div className={styles.step}>
-              <div className={styles.stepNumber}>01</div>
-              <div className={styles.stepContent}>
-                <h3 className={styles.stepTitle}>Cadastre o Objeto</h3>
-                <p className={styles.stepDescription}>
-                  Descreva o objeto perdido ou encontrado com detalhes como categoria, cor, local e adicione fotos.
-                </p>
-              </div>
-              <div className={styles.stepIcon}>📝</div>
-            </div>
-            <div className={styles.stepConnector}></div>
-            <div className={styles.step}>
-              <div className={styles.stepNumber}>02</div>
-              <div className={styles.stepContent}>
-                <h3 className={styles.stepTitle}>Receba Notificações</h3>
-                <p className={styles.stepDescription}>
-                  Nosso sistema inteligente busca correspondências e envia alertas automáticos em tempo real.
-                </p>
-              </div>
-              <div className={styles.stepIcon}>🔔</div>
-            </div>
-            <div className={styles.stepConnector}></div>
-            <div className={styles.step}>
-              <div className={styles.stepNumber}>03</div>
-              <div className={styles.stepContent}>
-                <h3 className={styles.stepTitle}>Recupere seu Objeto</h3>
-                <p className={styles.stepDescription}>
-                  Entre em contato via chat seguro e combine a devolução no local mais conveniente.
-                </p>
-              </div>
-              <div className={styles.stepIcon}>✅</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* CTA Section */}
       <section className={styles.cta}>
-        <div className={styles.ctaContent}>
-          <h2 className={styles.ctaTitle}>Pronto para encontrar seu objeto?</h2>
-          <p className={styles.ctaSubtitle}>
-            Junte-se à comunidade acadêmica e ajude a manter nosso campus organizado e seguro.
-          </p>
-          <div className={styles.ctaButtons}>
-            <button className={styles.btnPrimary} onClick={() => navigate("/lost")}>
-              Começar Agora
-            </button>
-            <button className={styles.btnOutline} onClick={() => navigate("/about")}>
-              Saiba Mais
+        <div className={styles.container}>
+          <div className={styles.ctaContent}>
+            <h2 className={styles.ctaTitle}>Pronto para começar?</h2>
+            <p className={styles.ctaText}>
+              Junte-se a milhares de estudantes e servidores que já estão usando o UnDF Connect para manter nosso campus mais organizado.
+            </p>
+            <button className={styles.ctaBtn} onClick={() => navigate("/login")}>
+              Criar Conta Gratuita
             </button>
           </div>
         </div>
@@ -214,40 +196,43 @@ export function LandingPage() {
       <footer className={styles.footer}>
         <div className={styles.container}>
           <div className={styles.footerGrid}>
-            <div className={styles.footerColumn}>
-              <img src="/src/components/images/undflogo.png" alt="UnDF" className={styles.footerLogo} />
-              <p className={styles.footerDescription}>
-                Sistema oficial de Achados e Perdidos da Universidade do Distrito Federal.
-                Conectando a comunidade acadêmica com eficiência e segurança.
+            <div className={styles.footerBrand}>
+              <h3>UnDF Connect</h3>
+              <p className={styles.footerDesc}>
+                Facilitando a vida acadêmica através da tecnologia.
+                Feito com ❤️ em Brasília.
               </p>
             </div>
-            <div className={styles.footerColumn}>
-              <h4 className={styles.footerTitle}>Navegação</h4>
-              <ul className={styles.footerLinks}>
-                <li><a href="#features">Recursos</a></li>
-                <li><a href="#how-it-works">Como Funciona</a></li>
-                <li><a href="/login">Entrar</a></li>
+            <div className={styles.footerCol}>
+              <h4>Plataforma</h4>
+              <ul>
+                <li><a href="/lost">Perdi um Objeto</a></li>
+                <li><a href="/found">Encontrei um Objeto</a></li>
+                <li><a href="/login">Login / Cadastro</a></li>
               </ul>
             </div>
-            <div className={styles.footerColumn}>
-              <h4 className={styles.footerTitle}>Institucional</h4>
-              <ul className={styles.footerLinks}>
-                <li><a href="https://undf.edu.br" target="_blank" rel="noopener noreferrer">Site Oficial</a></li>
-                <li><a href="https://undf.edu.br/sobre" target="_blank" rel="noopener noreferrer">Sobre a UnDF</a></li>
-                <li><a href="/privacy">Privacidade</a></li>
+            <div className={styles.footerCol}>
+              <h4>Institucional</h4>
+              <ul>
+                <li><a href="#">Sobre a UnDF</a></li>
+                <li><a href="#">Termos de Uso</a></li>
+                <li><a href="#">Privacidade</a></li>
               </ul>
             </div>
-            <div className={styles.footerColumn}>
-              <h4 className={styles.footerTitle}>Contato</h4>
-              <ul className={styles.footerLinks}>
-                <li>� SHIN CA 02, Lote 24 - Lago Norte</li>
-                <li>🏢 Brasília - DF, 71503-502</li>
-                <li>� contato@undf.edu.br</li>
+            <div className={styles.footerCol}>
+              <h4>Suporte</h4>
+              <ul>
+                <li><a href="#">Central de Ajuda</a></li>
+                <li><a href="#">Contato</a></li>
+                <li><a href="#">Reportar Bug</a></li>
               </ul>
             </div>
           </div>
           <div className={styles.footerBottom}>
-            <p>© {new Date().getFullYear()} UnDF - Universidade do Distrito Federal. Todos os direitos reservados.</p>
+            <p>© 2024 Universidade do Distrito Federal. Todos os direitos reservados.</p>
+            <div className={styles.socialLinks}>
+              {/* Social Icons could go here */}
+            </div>
           </div>
         </div>
       </footer>

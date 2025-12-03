@@ -33,23 +33,36 @@ export interface User {
   email: string;
   role: 'admin' | 'staff' | 'user';
   name: string;
+  points: number;
+  level: number;
 }
 
 export interface Item {
   id: string;
   title: string;
   description: string;
+  category: string;
+  color: string;
   type: 'LOST' | 'FOUND';
   status: 'OPEN' | 'RESOLVED' | 'EXPIRED';
   date: string;
   location: string;
   campus: string;
+  campus_name?: string;
   building?: string;
+  building_name?: string;
   reference?: string;
+  event_name?: string;
   user_id?: string;
   created_at?: string;
   updated_at?: string;
   item_photos?: ItemPhoto[];
+  claim_code?: string;
+  claim_status?: string;
+  claimed_by_name?: string;
+  claimed_at?: string;
+  finder_name?: string;
+  finder_ra?: string;
 }
 
 export interface ItemPhoto {
@@ -299,4 +312,187 @@ export const subscribeToNewItems = (
 
 export const unsubscribe = (subscription: ReturnType<typeof subscribeToNewItems>) => {
   supabase.removeChannel(subscription);
+};
+
+// ============================================
+// CLAIM SYSTEM HELPERS
+// ============================================
+
+export const generateClaimCode = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Removed similar looking chars
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code.slice(0, 3) + '-' + code.slice(3);
+};
+
+export const claimItem = async (itemId: string) => {
+  const code = generateClaimCode();
+
+  const { data, error } = await supabase
+    .from('items')
+    .update({
+      claim_code: code,
+      claim_status: 'PENDING',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', itemId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Item & { claim_code: string };
+};
+
+export const getItemByClaimCode = async (code: string) => {
+  const { data, error } = await supabase
+    .from('items')
+    .select(`
+      *,
+      photos:item_photos(*)
+    `)
+    .eq('claim_code', code)
+    .eq('claim_status', 'PENDING')
+    .single();
+
+  if (error) throw error;
+  return data as Item & { claim_code: string };
+};
+
+export const resolveClaim = async (itemId: string, claimedByName: string) => {
+  const { data, error } = await supabase
+    .from('items')
+    .update({
+      status: 'RESOLVED',
+      claim_status: 'RESOLVED',
+      claimed_by_name: claimedByName,
+      claimed_at: new Date().toISOString()
+    })
+    .eq('id', itemId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Item;
+};
+
+// ============================================
+// GAMIFICATION HELPERS
+// ============================================
+
+export interface Badge {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  criteria: string;
+}
+
+export interface UserBadge {
+  id: string;
+  user_id: string;
+  badge_id: string;
+  earned_at: string;
+  badge: Badge;
+}
+
+export const getLeaderboard = async () => {
+  const { data, error } = await supabase
+    .from('users')
+    .select(`
+      *,
+      badges:user_badges(
+        *,
+        badge:badges(*)
+      )
+    `)
+    .order('points', { ascending: false })
+    .limit(10);
+
+  if (error) throw error;
+  return data as (User & { badges: UserBadge[] })[];
+};
+
+export const getUserBadges = async (userId: string) => {
+  const { data, error } = await supabase
+    .from('user_badges')
+    .select(`
+      *,
+      badge:badges(*)
+    `)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  return data as UserBadge[];
+};
+
+// ============================================
+// ANALYTICS HELPERS
+// ============================================
+
+export const getHeatmapData = async () => {
+  const { data, error } = await supabase
+    .from('items')
+    .select('campus_name, building_name, created_at')
+    .eq('type', 'LOST');
+
+  if (error) throw error;
+  return data;
+};
+
+export const getAdminMetrics = async () => {
+  // This would ideally be a set of RPC calls or separate queries
+  // For MVP, we'll fetch data and calculate client-side or do simple counts
+
+  const { count: lostCount } = await supabase
+    .from('items')
+    .select('*', { count: 'exact', head: true })
+    .eq('type', 'LOST');
+
+  const { count: foundCount } = await supabase
+    .from('items')
+    .select('*', { count: 'exact', head: true })
+    .eq('type', 'FOUND');
+
+  const { count: resolvedCount } = await supabase
+    .from('items')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'RESOLVED');
+
+  return {
+    lostCount: lostCount || 0,
+    foundCount: foundCount || 0,
+    resolvedCount: resolvedCount || 0,
+    recoveryRate: lostCount ? Math.round(((resolvedCount || 0) / lostCount) * 100) : 0
+  };
+};
+
+export const findPotentialMatches = async (
+  title: string,
+  category: string,
+  type: 'LOST' | 'FOUND'
+) => {
+  const targetType = type === 'LOST' ? 'FOUND' : 'LOST';
+
+  // Simple matching logic: same category and title contains words
+  // In a real app, this would use Postgres Full Text Search or vector similarity
+  const { data, error } = await supabase
+    .from('items')
+    .select('*')
+    .eq('type', targetType)
+    .eq('category', category)
+    .eq('status', 'OPEN')
+    .textSearch('title', title.split(' ').join(' | '), {
+      type: 'websearch',
+      config: 'portuguese'
+    })
+    .limit(3);
+
+  if (error) {
+    console.error('Error finding matches:', error);
+    return [];
+  }
+
+  return data as Item[];
 };
